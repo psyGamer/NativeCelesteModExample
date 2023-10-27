@@ -352,3 +352,9 @@ MigrationBackup/
 # JetBrains Rider
 .idea
 
+# Zig
+zig-cache
+zig-out
+
+# Packages Mods
+*.zip
