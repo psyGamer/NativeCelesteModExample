@@ -8,6 +8,7 @@
         <CelestePrefix Condition="'$(CelestePrefix)' == '' And Exists('..\..\Celeste.dll')">..\..</CelestePrefix>
         <CelestePrefix Condition="'$(CelestePrefix)' == '' And Exists('..\..\..\Celeste.dll')">..\..\..</CelestePrefix>
         <CelestePrefix Condition="'$(CelestePrefix)' == ''">lib-stripped</CelestePrefix>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <!--Disable "Copy Local" for all references-->

@@ -14,9 +14,9 @@ pub fn build(b: *std.Build) !void {
 
     const install_prefix = b.getInstallPath(.{ .lib = {} }, "");
     const targets = [_]Target{
-        .{ .arch_os = "x86_64-windows", .filename = b.fmt("{s}.dll", .{name}), .dst_path = b.pathJoin(&.{ path, "lib-win-x64" }) },
+        // .{ .arch_os = "x86_64-windows", .filename = b.fmt("{s}.dll", .{name}), .dst_path = b.pathJoin(&.{ path, "lib-win-x64" }) },
         .{ .arch_os = "x86_64-linux", .filename = b.fmt("lib{s}.so", .{name}), .dst_path = b.pathJoin(&.{ path, "lib-linux" }) },
-        .{ .arch_os = "x86_64-macos", .filename = b.fmt("lib{s}.dylib", .{name}), .dst_path = b.pathJoin(&.{ path, "lib-osx" }) },
+        // .{ .arch_os = "x86_64-macos", .filename = b.fmt("lib{s}.dylib", .{name}), .dst_path = b.pathJoin(&.{ path, "lib-osx" }) },
     };
     for (targets) |t| {
         const lib = b.addSharedLibrary(.{
