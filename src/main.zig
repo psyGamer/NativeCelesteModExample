@@ -38,25 +38,42 @@ pub const MovingBlockEntity = struct {
     pub const PfnMoveH = *const fn (this: *anyopaque, move_h: f32) void;
     pub const PfnMoveV = *const fn (this: *anyopaque, move_v: f32) void;
     pub const PfnCollideCheckSolid = *const fn (this: *anyopaque, x: f32, y: f32) bool;
-    pub const PfnGetAtlasSubtextures = *const fn (this: *anyopaque, key: []const u8) *anyopaque;
     pub const PfnGetListCount = *const fn (this: *anyopaque) i32;
     pub const PfnListIndexDrawCentered = *const fn (this: *anyopaque, index: i32, x: f32, y: f32) void;
     pub const PfnListIndexRender = *const fn (this: *anyopaque, index: i32) void;
     pub const PfnDrawRect = *const fn (x: f32, y: f32, width: f32, hegith: f32, color: Color) void;
+    pub const PfnAddImage = *const fn (key: [*c]const u8, x: i32, y: i32, width: i32, hegith: i32, pos_x: f32, pos_y: f32) void;
 
     const idle_bg_fill: Color = .{ .r = 0x47, .g = 0x40, .b = 0x70 };
     const moving_bg_fill: Color = .{ .r = 0x30, .g = 0xb3, .b = 0x35 };
 
     var entities: std.AutoHashMapUnmanaged(EntityID, Self) = .{};
 
-    direction: Vec2 = .{},
-    fill_color: Color = .{},
+    direction: Vec2,
+    fill_color: Color,
 
-    fn init() Self {
-        return .{};
-    }
-    fn deinit(self: Self) void {
-        _ = self;
+    fn init(width: f32, height: f32, add_image: MovingBlockEntity.PfnAddImage) Self {
+        const tiles_width: u32 = @intFromFloat(width / 8.0);
+        const tiles_height: u32 = @intFromFloat(height / 8.0);
+        for (0..tiles_width) |x| {
+            for (0..tiles_height) |y| {
+                const h_sprite_idx: i32 = if (x == 0) 0 else if (x < tiles_width - 1) 1 else 2;
+                const v_sprite_idx: i32 = if (y == 0) 0 else if (y < tiles_height - 1) 1 else 2;
+                const key: [*c]const u8 = "objects/moveBlock/base";
+                std.log.info("{d}", .{@intFromPtr(key)});
+                add_image(
+                    key,
+                    h_sprite_idx * 8,
+                    v_sprite_idx * 8,
+                    8,
+                    8,
+                    @as(f32, @floatFromInt(x)) * 8.0 + 4.0,
+                    @as(f32, @floatFromInt(y)) * 8.0 + 4.0,
+                );
+            }
+        }
+
+        return .{ .direction = .{}, .fill_color = .{} };
     }
 
     fn update(
@@ -117,11 +134,10 @@ pub const MovingBlockEntity = struct {
     }
 };
 
-pub export fn MovingBlockEntity_ctor(id: EntityID) void {
-    MovingBlockEntity.entities.put(std.heap.page_allocator, id, MovingBlockEntity.init()) catch @panic("OOM");
+pub export fn MovingBlockEntity_ctor(id: EntityID, width: f32, height: f32, add_image: MovingBlockEntity.PfnAddImage) void {
+    MovingBlockEntity.entities.put(std.heap.page_allocator, id, MovingBlockEntity.init(width, height, add_image)) catch @panic("OOM");
 }
 pub export fn MovingBlockEntity_dtor(id: EntityID) void {
-    MovingBlockEntity.entities.getPtr(id).?.deinit();
     _ = MovingBlockEntity.entities.remove(id);
 }
 pub export fn MovingBlockEntity_Update(

@@ -1,61 +1,51 @@
-using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Celeste.Mod.Entities;
 using Microsoft.Xna.Framework;
 using Monocle;
 
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using System.Threading;
-
 namespace Celeste.Mod.NativeLibraryMod;
 
+#pragma warning disable CS8500
 [CustomEntity("NativeLibraryMod/MovingBlock")]
 public class MovingBlockEntity : Solid {
     
-    private List<MTexture> ArrowSprites = new();
+    private List<MTexture> ArrowSprites;
     private List<Image> BodySprites = new();
 
-    private long ID = Calc.Random.NextInt64();
+    private readonly long ID = Calc.Random.NextInt64();
 
     [DllImport("NativeLibraryMod")]
-    private static extern void MovingBlockEntity_ctor(long id);
+    private static extern void MovingBlockEntity_ctor(long id, float width, float height, nint addImage);
     [DllImport("NativeLibraryMod")]
     private static extern void MovingBlockEntity_dtor(long id);
     [DllImport("NativeLibraryMod")]
     private static extern unsafe void MovingBlockEntity_Update(long id, MovingBlockEntity* _this, float deltaTime, Vector2* position, nint _base, nint moveH, nint moveV, nint collideCheckSolid);
     [DllImport("NativeLibraryMod")]
-    private static extern unsafe void MovingBlockEntity_Render(long id, Vector2 position, Vector2 extend, List<MTexture>* arrowSprties, List<Image>* bodySprties, nint getListCount, nint indexListDrawCentered, nint indexListRender, nint drawRect);
+    private static extern unsafe void MovingBlockEntity_Render(long id, Vector2 position, Vector2 extend, List<MTexture>* arrowSprites, List<Image>* bodySprites, nint getListCount, nint indexListDrawCentered, nint indexListRender, nint drawRect);
     [DllImport("NativeLibraryMod")]
     private static extern DashCollisionResults MovingBlockEntity_OnDashed(long id, Vector2 direction);
 
     private static unsafe T* GetPtr<T>(T obj) => (T*)Unsafe.AsPointer(ref obj);
 
-    public MovingBlockEntity(Vector2 position, float width, float height)
+    private unsafe delegate void AddImageDelegate(byte* key, int x, int y, int width, int height, float posX, float posY);
+    public unsafe MovingBlockEntity(Vector2 position, float width, float height)
         : base(position, width, height, safe: false)
     {
-        MovingBlockEntity_ctor(ID);
-        OnDashCollide = (_, direction) => MovingBlockEntity_OnDashed(ID, direction);
-        ArrowSprites = GFX.Game.GetAtlasSubtextures("objects/moveBlock/arrow");
-        ArrowSprites.Add(GFX.Game["objects/moveBlock/x"]);
-        
-        int tilesWidth = (int)(width / 8f), tilesHeight = (int)(height / 8f);
-        for (int x = 0; x < tilesWidth; x++) {
-            for (int y = 0; y < tilesHeight; y++) {
-                int hSpriteIdx = x == 0 ? 0 : (x < tilesWidth  - 1 ? 1 : 2);
-                int vSpriteIdx = y == 0 ? 0 : (y < tilesHeight - 1 ? 1 : 2);
-        
-                var image = new Image(GFX.Game["objects/moveBlock/base"].GetSubtexture(hSpriteIdx * 8, vSpriteIdx * 8, 8, 8)) {
-                    Position = new Vector2(x * 8f + 4f, y * 8f + 4f),
+        MovingBlockEntity_ctor(ID,
+            width,
+            height,
+            Marshal.GetFunctionPointerForDelegate<AddImageDelegate>((key, texX, texY, texWidth, texHeight, posX, posY) => {
+                var image = new Image(GFX.Game[Marshal.PtrToStringUTF8((nint)key)].GetSubtexture(texX, texY, texWidth, texHeight)) {
+                    Position = new Vector2(posX, posY),
                 }.CenterOrigin();
                 Add(image);
                 BodySprites.Add(image);
-            }
-        }
+            }));
+        OnDashCollide = (_, direction) => MovingBlockEntity_OnDashed(ID, direction);
+        ArrowSprites = GFX.Game.GetAtlasSubtextures("objects/moveBlock/arrow");
+        ArrowSprites.Add(GFX.Game["objects/moveBlock/x"]);
     }
     public MovingBlockEntity(EntityData data, Vector2 offset) 
         : this(data.Position + offset, data.Width, data.Height) { }
